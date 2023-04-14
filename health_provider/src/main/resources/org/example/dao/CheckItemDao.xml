@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="org.example.dao.CheckItemDao">
+
+<!--    新增检查项-->
+    <insert id="add" parameterType="org.example.pojo.CheckItem">
+        insert into
+            t_checkitem(code, name, sex, age, price, type, attention, remark)
+        values (#{code}, #{name}, #{sex}, #{age}, #{price}, #{type}, #{attention}, #{remark})
+    </insert>
+
+<!--    按id查询检查项-->
+    <select id="findById" parameterType="int" resultType="org.example.pojo.CheckItem">
+        select * from t_checkitem where id=#{id}
+    </select>
+
+<!--    查询全部检查项-->
+    <select id="findAll" resultType="org.example.pojo.CheckItem">
+        select * from t_checkitem
+    </select>
+
+<!--    按code或name查询-->
+    <select id="selectByCondition" parameterType="String" resultType="org.example.pojo.CheckItem">
+        select * from t_checkitem
+        <if test="value != null and value.length > 0">
+            where code = #{value} or name = #{value}
+        </if>
+    </select>
+
+<!--    按id删除-->
+<!--    删除前查找外键关联数-->
+    <select id="findCountByCheckItemId" resultType="long" parameterType="int">
+        select count(*) from t_checkgroup_checkitem where checkitem_id=#{checkitem_id}
+    </select>
+    <select id="deleteById" parameterType="int">
+        delete from t_checkitem where id=#{id}
+    </select>
+
+<!--    edit-->
+    <update id="edit" parameterType="org.example.pojo.CheckItem">
+        update t_checkitem
+        <set>
+            <if test="name != null">
+                name = #{name},
+            </if>
+            <if test="sex != null">
+                sex = #{sex},
+            </if>
+            <if test="code != null">
+                code = #{code},
+            </if>
+            <if test="age != null">
+                age = #{age},
+            </if>
+            <if test="price != null">
+                price = #{price},
+            </if>
+            <if test="type != null">
+                type = #{type},
+            </if>
+            <if test="attention != null">
+                attention = #{attention},
+            </if>
+            <if test="remark != null">
+                remark = #{remark},
+            </if>
+        </set>
+        where id = #{id}
+    </update>
+
+<!--    查找某id对应的检查组包含的多个检查项-->
+    <select id="findCheckItemDetailById" resultType="org.example.pojo.CheckItem">
+        select * from t_checkitem
+                 where id in (select checkitem_id from t_checkgroup_checkitem where checkgroup_id=#{id})
+    </select>
+
+</mapper>

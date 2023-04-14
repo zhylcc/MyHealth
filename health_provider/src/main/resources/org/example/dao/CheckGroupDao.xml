@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="org.example.dao.CheckGroupDao">
+
+<!--    新增检查组-->
+    <insert id="add" parameterType="org.example.pojo.CheckGroup">
+        <!--通过mybatis框架提供的selectKey标签获得插入后产生的自增ID值-->
+        <selectKey resultType="int" order="AFTER" keyProperty="id">
+            select LAST_INSERT_ID()
+        </selectKey>
+        insert into
+            t_checkgroup(code, name, helpCode, sex, remark, attention)
+        values(#{code}, #{name}, #{helpCode}, #{sex}, #{remark}, #{attention})
+    </insert>
+
+<!--    查找检查组关联的所有检查项-->
+    <select id="findCheckItemIdsByCheckGroupId" parameterType="int" resultType="int">
+        select checkitem_id from t_checkgroup_checkitem where checkgroup_id=#{id}
+    </select>
+
+<!--    编辑检查组-->
+    <update id="edit" parameterType="org.example.pojo.CheckGroup">
+        update t_checkgroup
+        <set>
+            <if test="name != null">
+                name = #{name},
+            </if>
+            <if test="sex != null">
+                sex = #{sex},
+            </if>
+            <if test="code != null">
+                code = #{code},
+            </if>
+            <if test="helpCode != null">
+                helpCode = #{helpCode},
+            </if>
+            <if test="attention != null">
+                attention = #{attention},
+            </if>
+            <if test="remark != null">
+                remark = #{remark},
+            </if>
+        </set>
+        where id = #{id}
+    </update>
+
+<!--    设置检查组和检查项的关联关系-->
+    <insert id="setCheckGroupAndCheckItem" parameterType="map">
+        insert into
+            t_checkgroup_checkitem(checkgroup_id, checkitem_id)
+        values(#{checkGroupId}, #{checkItemId})
+    </insert>
+
+<!--    删除检查组与检查项的关联关系-->
+    <delete id="deleteAssociation" parameterType="int">
+        delete from t_checkgroup_checkitem where checkgroup_id=#{id}
+    </delete>
+
+<!--    查找某id对应的套餐包含的多个检查组，每个检查组包含多个检查项-->
+    <select id="findCheckGroupDetailById" resultMap="findDetailResultMap">
+        select * from t_checkgroup
+                 where id in (select checkgroup_id from t_setmeal_checkgroup where setmeal_id=#{id})
+    </select>
+    <resultMap id="findDetailResultMap" type="org.example.pojo.CheckGroup" extends="baseResultMap">
+        <collection property="checkItems"
+                    javaType="ArrayList"
+                    ofType="org.example.pojo.CheckItem"
+                    column="id"
+                    select="org.example.dao.CheckItemDao.findCheckItemDetailById"/>
+    </resultMap>
+    <resultMap type="org.example.pojo.CheckGroup" id="baseResultMap">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="code" property="code"/>
+        <result column="helpCode" property="helpCode"/>
+        <result column="sex" property="sex"/>
+        <result column="remark" property="remark"/>
+        <result column="attention" property="attention"/>
+    </resultMap>
+
+</mapper>

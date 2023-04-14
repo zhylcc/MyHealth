@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:dubbo="http://code.alibabatech.com/schema/dubbo"
+       xmlns:mvc="http://www.springframework.org/schema/mvc"
+       xmlns:security="http://www.springframework.org/schema/security"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+						http://www.springframework.org/schema/beans/spring-beans.xsd
+						http://www.springframework.org/schema/mvc
+						http://www.springframework.org/schema/mvc/spring-mvc.xsd
+						http://www.springframework.org/schema/security
+						http://www.springframework.org/schema/security/spring-security.xsd
+						http://code.alibabatech.com/schema/dubbo
+						http://code.alibabatech.com/schema/dubbo/dubbo.xsd">
+<!--    开启mvc注解驱动-->
+    <mvc:annotation-driven>
+        <!--        使用fastjson转换返回对象-->
+        <mvc:message-converters register-defaults="true">
+            <bean class="com.alibaba.fastjson.support.spring.FastJsonHttpMessageConverter">
+                <property name="supportedMediaTypes" value="application/json"/>
+                <property name="features">
+                    <list>
+                        <value>WriteMapNullValue</value>
+                        <value>WriteDateUseDateFormat</value>
+                    </list>
+                </property>
+            </bean>
+        </mvc:message-converters>
+    </mvc:annotation-driven>
+
+<!--    dubbo服务消费方-->
+    <dubbo:application name="health_consumer" />
+    <dubbo:registry address="zookeeper://localhost:2181"/>
+    <dubbo:annotation package="org.example" />
+    <dubbo:consumer timeout="600000" check="false"/>
+
+<!--    文件上传组件配置-->
+    <bean id="multipartResolver" class="org.springframework.web.multipart.commons.CommonsMultipartResolver">
+        <property name="maxUploadSize" value="104857600"/>
+        <property name="maxInMemorySize" value="4096"/>
+        <property name="defaultEncoding" value="UTF-8"/>
+    </bean>
+
+<!--    jedis连接池配置-->
+    <bean id="jedisPoolConfig" class="redis.clients.jedis.JedisPoolConfig">
+        <property name="maxTotal" value="200"/>
+        <property name="maxIdle" value="50"/>
+        <property name="testOnBorrow" value="true"/>
+        <property name="testOnReturn" value="true"/>
+    </bean>
+    <bean id="jedisPool" class="redis.clients.jedis.JedisPool">
+        <constructor-arg name="poolConfig" ref="jedisPoolConfig" />
+        <constructor-arg name="uri" value="redis://127.0.0.1:6379/1"/>
+        <constructor-arg name="timeout" value="30000" type="int" />
+    </bean>
+
+<!--    spring-security配置-->
+    <bean id="passwordEncoder"
+          class="org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder" />
+    <bean id="springSecurityUserService"
+          class="org.example.service.SpringSecurityUserService"/>
+    <!--认证管理器，用于处理认证操作-->
+    <security:authentication-manager>
+        <!--认证提供者，执行具体的认证逻辑-->
+        <security:authentication-provider user-service-ref="springSecurityUserService">
+            <!--指定密码加密策略-->
+            <security:password-encoder ref="passwordEncoder" />
+        </security:authentication-provider>
+    </security:authentication-manager>
+    <!--security-http配置-->
+    <security:http auto-config="true" use-expressions="true">
+        <security:intercept-url pattern="/user/**"  access="isAuthenticated()" />
+        <!--form-login：定义表单登录信息
+            默认表单名为username和password，可以显式修改；
+            authentication-*-forward-url可以是页面，如果是接口则需要在Controller中映射。
+        -->
+        <security:form-login username-parameter="username"
+                             password-parameter="password"
+                             login-processing-url="/login"
+                             authentication-success-forward-url="/user/loginForward.do?s=0"
+                             authentication-failure-forward-url="/user/loginForward.do?s=1"/>
+        <security:logout logout-url="/logout" logout-success-url="/login" invalidate-session="true"/>
+        <security:csrf disabled="true"/>
+    </security:http>
+    <!--开启注解方式权限控制-->
+    <security:global-method-security pre-post-annotations="enabled" />
+
+</beans>
